@@ -33,6 +33,9 @@ import com.alipay.sofa.jraft.option.RaftOptions;
 import com.alipay.sofa.jraft.util.Describer;
 
 /**
+ * Raft 分组中的一个节点，连接封装底层的所有服务，用户看到的主要服务接口，
+ * 特别是 apply(task) 用于向 raft group 组成的复制状态机集群提交新任务应用到业务状态机。
+ *
  * A raft replica node.
  *
  * @author boyan (boyan@alibaba-inc.com)

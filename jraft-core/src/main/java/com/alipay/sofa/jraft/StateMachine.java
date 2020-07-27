@@ -23,6 +23,9 @@ import com.alipay.sofa.jraft.storage.snapshot.SnapshotReader;
 import com.alipay.sofa.jraft.storage.snapshot.SnapshotWriter;
 
 /**
+ *
+ * StateMachine： 用户核心逻辑的实现,核心是 onApply(Iterator) 方法，应用通过 Node#apply(task) 提交的日志到业务状态机。
+ *
  * |StateMachine| is the sink of all the events of a very raft node.
  * Implement a specific StateMachine for your own business logic.
  * NOTE: All the interfaces are not guaranteed to be thread safe and they are

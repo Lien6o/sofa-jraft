@@ -76,6 +76,7 @@ public class FSMCallerImpl implements FSMCaller {
 
     /**
      * Task type
+     *
      * @author boyan (boyan@alibaba-inc.com)
      *
      * 2018-Apr-03 11:12:25 AM
@@ -91,7 +92,8 @@ public class FSMCallerImpl implements FSMCaller {
         STOP_FOLLOWING, //
         SHUTDOWN, //
         FLUSH, //
-        ERROR;
+        ERROR,
+        ;
 
         private String metricName;
 
@@ -103,51 +105,51 @@ public class FSMCallerImpl implements FSMCaller {
         }
     }
 
-    /**
-     * Apply task for disruptor.
-     *
-     * @author boyan (boyan@alibaba-inc.com)
-     *
-     * 2018-Apr-03 11:12:35 AM
-     */
-    private static class ApplyTask {
-        TaskType            type;
-        // union fields
-        long                committedIndex;
-        long                term;
-        Status              status;
-        LeaderChangeContext leaderChangeCtx;
-        Closure             done;
-        CountDownLatch      shutdownLatch;
+/**
+ * Apply task for disruptor.
+ *
+ * @author boyan (boyan@alibaba-inc.com)
+ *
+ * 2018-Apr-03 11:12:35 AM
+ */
+private static class ApplyTask {
+    TaskType            type;
+    // union fields
+    long                committedIndex;
+    long                term;
+    Status              status;
+    LeaderChangeContext leaderChangeCtx;
+    Closure             done;
+    CountDownLatch      shutdownLatch;
 
-        public void reset() {
-            this.type = null;
-            this.committedIndex = 0;
-            this.term = 0;
-            this.status = null;
-            this.leaderChangeCtx = null;
-            this.done = null;
-            this.shutdownLatch = null;
-        }
+    public void reset() {
+        this.type = null;
+        this.committedIndex = 0;
+        this.term = 0;
+        this.status = null;
+        this.leaderChangeCtx = null;
+        this.done = null;
+        this.shutdownLatch = null;
     }
+}
 
-    private static class ApplyTaskFactory implements EventFactory<ApplyTask> {
+private static class ApplyTaskFactory implements EventFactory<ApplyTask> {
 
-        @Override
-        public ApplyTask newInstance() {
-            return new ApplyTask();
-        }
+    @Override
+    public ApplyTask newInstance() {
+        return new ApplyTask();
     }
+}
 
-    private class ApplyTaskHandler implements EventHandler<ApplyTask> {
-        // max committed index in current batch, reset to -1 every batch
-        private long maxCommittedIndex = -1;
+private class ApplyTaskHandler implements EventHandler<ApplyTask> {
+    // max committed index in current batch, reset to -1 every batch
+    private long maxCommittedIndex = -1;
 
-        @Override
-        public void onEvent(final ApplyTask event, final long sequence, final boolean endOfBatch) throws Exception {
-            this.maxCommittedIndex = runApplyTask(event, this.maxCommittedIndex, endOfBatch);
-        }
+    @Override
+    public void onEvent(final ApplyTask event, final long sequence, final boolean endOfBatch) throws Exception {
+        this.maxCommittedIndex = runApplyTask(event, this.maxCommittedIndex, endOfBatch);
     }
+}
 
     private LogManager                                              logManager;
     private StateMachine                                            fsm;
@@ -269,6 +271,11 @@ public class FSMCallerImpl implements FSMCaller {
         });
     }
 
+    /**
+     * 保存快照信息
+     * @param done callback
+     * @return
+     */
     @Override
     public boolean onSnapshotSave(final SaveSnapshotClosure done) {
         return enqueueTask((task, sequence) -> {

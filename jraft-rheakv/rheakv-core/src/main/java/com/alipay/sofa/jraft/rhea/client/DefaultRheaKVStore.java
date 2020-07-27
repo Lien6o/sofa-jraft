@@ -161,7 +161,7 @@ import com.lmax.disruptor.dsl.Disruptor;
  *              2. region5->regionScan(regionStartKey5, regionEndKey5)
  *
  *            ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─                              ┌ ─ ─ ─ ─ ─ ─ ─ ─ ─
- *                call region1   │                                 call region3   │
+ *                call region1   │                             |   call region3   │
  *            └ ─ ─ ─ ─ ─ ─ ─ ─ ─                              └ ─ ─ ─ ─ ─ ─ ─ ─ ─
  *                     ║        ┌ ─ ─ ─ ─ ─ ─ ┐                         ║
  *                               retry region2
@@ -210,6 +210,11 @@ public class DefaultRheaKVStore implements RheaKVStore {
 
     private volatile boolean                   started;
 
+    /**
+     * 启动 rhea KV
+     * @param opts
+     * @return
+     */
     @Override
     public synchronized boolean init(final RheaKVStoreOptions opts) {
         if (this.started) {
@@ -229,6 +234,8 @@ public class DefaultRheaKVStore implements RheaKVStore {
         if (pdOpts.isFake()) {
             this.pdClient = new FakePlacementDriverClient(opts.getClusterId(), clusterName);
         } else {
+            // PD
+            // 全局的中心总控节点，负责整个集群的调度，不需要自管理的集群可不启用 PD (一个 PD 可管理多个集群，基于 clusterId 隔离)。
             this.pdClient = new RemotePlacementDriverClient(opts.getClusterId(), clusterName);
         }
         if (!this.pdClient.init(pdOpts)) {

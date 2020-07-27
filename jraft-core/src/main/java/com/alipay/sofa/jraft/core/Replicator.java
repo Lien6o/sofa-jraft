@@ -69,6 +69,8 @@ import com.google.protobuf.Message;
 import com.google.protobuf.ZeroByteStringHelper;
 
 /**
+ * Replicator： 用于 leader 向 follower 复制日志，也就是 raft 中的 appendEntries 调用，包括心跳存活检查等。
+ *
  * Replicator for replicating log entry from leader to followers.
  * @author boyan (boyan@alibaba-inc.com)
  *

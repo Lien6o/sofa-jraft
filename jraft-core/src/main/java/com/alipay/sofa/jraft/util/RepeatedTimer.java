@@ -83,6 +83,7 @@ public abstract class RepeatedTimer implements Describer {
     public void run() {
         this.invoking = true;
         try {
+            // 计时器 触发回调函数
             onTrigger();
         } catch (final Throwable t) {
             LOG.error("Run timer failed.", t);
@@ -173,6 +174,9 @@ public abstract class RepeatedTimer implements Describer {
         }
     }
 
+    /**
+     * 单次延迟执行
+     */
     private void schedule() {
         if (this.timeout != null) {
             this.timeout.cancel();
@@ -184,6 +188,7 @@ public abstract class RepeatedTimer implements Describer {
                 LOG.error("Run timer task failed, taskName={}.", RepeatedTimer.this.name, t);
             }
         };
+        // 设置超时时间
         this.timeout = this.timer.newTimeout(timerTask, adjustTimeout(this.timeoutMs), TimeUnit.MILLISECONDS);
     }
 

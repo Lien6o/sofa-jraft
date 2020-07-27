@@ -22,6 +22,10 @@ import com.alipay.sofa.jraft.Status;
 import com.google.protobuf.Message;
 
 /**
+ * https://www.sofastack.tech/projects/sofa-jraft/engine-architecture/
+ * Snapshot 存储,，用于存放用户的状态机 snapshot 及元信息，可选。
+ * SnapshotStorage 用于 snapshot 存储实现， SnapshotExecutor 用于 snapshot 实际存储、远程安装、复制的管理。
+ *
  * Represents a state machine snapshot.
  *
  * @author boyan (boyan@alibaba-inc.com)

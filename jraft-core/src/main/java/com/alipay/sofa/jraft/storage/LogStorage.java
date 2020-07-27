@@ -24,7 +24,9 @@ import com.alipay.sofa.jraft.option.LogStorageOptions;
 
 /**
  * Log entry storage service.
- *
+ * Log 存储，记录 raft 配置变更和用户提交任务的日志，将从 Leader 复制到其他节点上。
+ * LogStorage 是存储实现，
+ * LogManager 负责对底层存储的调用，对调用做缓存、批量提交、必要的检查和优化。
  * @author boyan (boyan@alibaba-inc.com)
  *
  * 2018-Mar-12 3:43:54 PM

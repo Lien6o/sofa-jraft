@@ -32,6 +32,7 @@ import com.alipay.sofa.jraft.util.Endpoint;
  */
 public class Server1 {
 
+    @SuppressWarnings("")
     public static void main(final String[] args) throws Exception {
         final PlacementDriverOptions pdOpts = PlacementDriverOptionsConfigured.newConfigured()
                 .withFake(true) // use a fake pd

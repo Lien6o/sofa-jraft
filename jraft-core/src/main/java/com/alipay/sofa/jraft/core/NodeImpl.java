@@ -1069,6 +1069,7 @@ public class NodeImpl implements Node, RaftServerService {
         if (this.conf.isStable() && this.conf.getConf().size() == 1 && this.conf.getConf().contains(this.serverId)) {
             // The group contains only this server which must be the LEADER, trigger
             // the timer immediately.
+            // 选举自己
             electSelf();
         } else {
             this.writeLock.unlock();
@@ -1095,14 +1096,18 @@ public class NodeImpl implements Node, RaftServerService {
             }
             if (this.state == State.STATE_FOLLOWER) {
                 LOG.debug("Node {} stop election timer, term={}.", getNodeId(), this.currTerm);
+                // 随机选举计时器 暂停
                 this.electionTimer.stop();
             }
             resetLeaderId(PeerId.emptyPeer(), new Status(RaftError.ERAFTTIMEDOUT,
                 "A follower's leader_id is reset to NULL as it begins to request_vote."));
+            // 将当前状态设置为 候选者 CANDIDATE
             this.state = State.STATE_CANDIDATE;
+            // 当前任期加一
             this.currTerm++;
             this.votedId = this.serverId.copy();
             LOG.debug("Node {} start vote timer, term={} .", getNodeId(), this.currTerm);
+            // 投票计时器启动
             this.voteTimer.start();
             this.voteCtx.init(this.conf.getConf(), this.conf.isStable() ? null : this.conf.getOldConf());
             oldTerm = this.currTerm;
@@ -1127,6 +1132,7 @@ public class NodeImpl implements Node, RaftServerService {
                     LOG.warn("Node {} channel init failed, address={}.", getNodeId(), peer.getEndpoint());
                     continue;
                 }
+                // 发起投票请求 request vote
                 final OnRequestVoteRpcDone done = new OnRequestVoteRpcDone(peer, this.currTerm, this);
                 done.request = RequestVoteRequest.newBuilder() //
                     .setPreVote(false) // It's not a pre-vote request.
@@ -1183,6 +1189,9 @@ public class NodeImpl implements Node, RaftServerService {
         }
     }
 
+    /**
+     * 选举后，成为领导
+     */
     private void becomeLeader() {
         Requires.requireTrue(this.state == State.STATE_CANDIDATE, "Illegal state: " + this.state);
         LOG.info("Node {} become leader of group, term={}, conf={}, oldConf={}.", getNodeId(), this.currTerm,
@@ -1601,6 +1610,14 @@ public class NodeImpl implements Node, RaftServerService {
         }
     }
 
+    /**
+     * SOFAJRaft 中在 request-vote 之前会先进行
+     * pre-vote(currentTerm + 1, lastLogIndex, lastLogTerm)，
+     * 多数派成功后才会转换状态为 candidate 发起真正的 request-vote，
+     * 所以分区后的节点，pre-vote 不会成功，也就不会导致集群一段时间内无法正常提供服务。
+     * @param request   data of the pre vote
+     * @return
+     */
     @Override
     public Message handlePreVoteRequest(final RequestVoteRequest request) {
         boolean doUnlock = true;
@@ -2429,6 +2446,12 @@ public class NodeImpl implements Node, RaftServerService {
         }
     }
 
+    /**
+     * request vote success callback 投票成功执行逻辑
+     * @param peerId
+     * @param term
+     * @param response
+     */
     public void handleRequestVoteResponse(final PeerId peerId, final long term, final RequestVoteResponse response) {
         this.writeLock.lock();
         try {
@@ -2455,6 +2478,7 @@ public class NodeImpl implements Node, RaftServerService {
             if (response.getGranted()) {
                 this.voteCtx.grant(peerId);
                 if (this.voteCtx.isGranted()) {
+                    // 成为领导
                     becomeLeader();
                 }
             }
@@ -2553,6 +2577,18 @@ public class NodeImpl implements Node, RaftServerService {
         }
     }
 
+    /**
+     * 解决分区
+     * 6. Symmetric network partition tolerance：对称网络分区容忍性。
+     * S1  term 1
+     * S3  term 1
+     * xxxxxxxxxxxxxxxxxx
+     * S2  term 108
+     *
+     * 如上图 S1 为当前 Leader，网络分区造成 S2 不断增加本地 term，
+     * 为了避免网络恢复后 S2 发起选举导致正在良心 工作的 Leader step-down，
+     * 从而导致整个集群重新发起选举，SOFAJRaft 中增加了 pre-vote 来避免这个问题的发生。
+     */
     // in writeLock
     private void preVote() {
         long oldTerm;
@@ -2593,6 +2629,13 @@ public class NodeImpl implements Node, RaftServerService {
                     continue;
                 }
                 final OnPreVoteRpcDone done = new OnPreVoteRpcDone(peer, this.currTerm);
+
+                /*
+                 * SOFAJRaft 中在 request-vote 之前会先进行
+                 * pre-vote(currentTerm + 1, lastLogIndex, lastLogTerm)，
+                 * 多数派成功后才会转换状态为 candidate 发起真正的 request-vote，
+                 * 所以分区后的节点，pre-vote 不会成功，也就不会导致集群一段时间内无法正常提供服务。
+                 */
                 done.request = RequestVoteRequest.newBuilder() //
                     .setPreVote(true) // it's a pre-vote request.
                     .setGroupId(this.groupId) //
@@ -2616,6 +2659,9 @@ public class NodeImpl implements Node, RaftServerService {
         }
     }
 
+    /**
+     * 投票超时
+     */
     private void handleVoteTimeout() {
         this.writeLock.lock();
         if (this.state != State.STATE_CANDIDATE) {
